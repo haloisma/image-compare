@@ -1,0 +1,25 @@
+{
+  "name": "image-compare-1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haloisma/image-compare.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/haloisma/image-compare/issues"
+  },
+  "homepage": "https://github.com/haloisma/image-compare#readme",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "pixelmatch": "^6.0.0",
+    "pngjs": "^7.0.0"
+  }
+}
