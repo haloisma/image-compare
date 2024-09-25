@@ -1,59 +1,65 @@
+import puppeteer from "puppeteer";
+import path from "path";
 import fs from "fs";
-import { PNG } from "pngjs";
-import pixelmatch from "pixelmatch";
 
-// Path to the file where the counter will be stored
-const counterFilePath = "./counter.txt";
+// Get the pageName from the command-line arguments
+const pageName = process.argv[2];
 
-function readCounter() {
-  if (fs.existsSync(counterFilePath)) {
-    const counter = parseInt(fs.readFileSync(counterFilePath, "utf8"), 10);
-    return isNaN(counter) ? 1 : counter;
-  } else {
-    return 1; // If the file doesn't exist, start from 1
+if (!pageName) {
+  console.error("Please provide a page name as an argument.");
+  process.exit(1);
+}
+
+// Helper function to get a formatted timestamp
+function getFormattedTimestamp() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+}
+
+(async () => {
+  // Launch a new browser instance
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+
+  // Construct the URL based on the page name
+  const url = "https://www." + pageName;
+
+  // Generate the timestamped file name (timestamp first)
+  const timestamp = getFormattedTimestamp();
+  const screenshotPath = `screens/${pageName}/${timestamp}_screenshot.png`;
+
+  // Navigate to the web page
+  await page.goto(url);
+
+  // Set the viewport to a specific resolution
+  await page.setViewport({
+    width: 1920, // Customize this to the desired width
+    height: 1080, // Customize this to the desired height
+    deviceScaleFactor: 1, // Ensures the image is captured at the same resolution
+  });
+
+  // Ensure the directory exists
+  await ensureDirectoryExists(screenshotPath);
+
+  // Capture the screenshot with the timestamp at the beginning of the file name
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+
+  console.log(`Screenshot saved as ${screenshotPath}`);
+
+  // Close the browser
+  await browser.close();
+})();
+
+// Helper function to ensure directory exists
+async function ensureDirectoryExists(filePath) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    await fs.promises.mkdir(dir, { recursive: true });
   }
 }
-
-// Function to save the updated counter back to the file
-function saveCounter(counter) {
-  fs.writeFileSync(counterFilePath, counter.toString(), "utf8");
-}
-
-// Get the current counter value
-let diffCounter = readCounter();
-
-// Function to generate a unique file name with an incremental counter
-function generateFileNameWithCounter(basePath, extension) {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-"); // Replace : and . to avoid issues in filenames
-  return `${basePath}_${timestamp}_${diffCounter}${extension}`;
-}
-
-const img1Path = "../image-compare-1/images_input_pixelmatch/image1.png"; // Path to your first image
-const img2Path = "../image-compare-1/images_input_pixelmatch/image2.png"; // Path to your second image
-const diffPath = generateFileNameWithCounter(
-  "../image-compare-1/pixelmatch_results/diff",
-  ".png"
-); // Path to save the diff image
-
-// Read the two images
-const img1 = PNG.sync.read(fs.readFileSync(img1Path));
-const img2 = PNG.sync.read(fs.readFileSync(img2Path));
-
-// Create an empty image for the diff output
-const { width, height } = img1;
-const diff = new PNG({ width, height });
-
-// Compare the images
-const pixelDiff = pixelmatch(img1.data, img2.data, diff.data, width, height, {
-  threshold: 0.1, // Adjust sensitivity
-});
-
-// Write the diff image to disk
-fs.writeFileSync(diffPath, PNG.sync.write(diff));
-
-// Increment the counter and save it to the file
-diffCounter++;
-saveCounter(diffCounter);
-
-console.log(`Number of differing pixels: ${pixelDiff}`);
-console.log(`Diff file saved as: ${diffPath}`);
